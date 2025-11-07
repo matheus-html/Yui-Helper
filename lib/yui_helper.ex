@@ -2,7 +2,7 @@ defmodule YuiHelper do
   use Nostrum.Consumer
   alias Nostrum.Api
 
-  alias YuiHelper.Post
+  alias YuiHelper.Trivia
   alias YuiHelper.Ambiente
   alias YuiHelper.Invocar
   alias YuiHelper.Tradutor
@@ -12,8 +12,8 @@ defmodule YuiHelper do
 
   def handle_event({:MESSAGE_CREATE, msg, _ws}) do
    cond do
-    String.starts_with?(msg.content, "!post") ->
-        Api.Message.create(msg.channel_id, Post.run())
+    String.starts_with?(msg.content, "!trivia") ->
+        Api.Message.create(msg.channel_id, Trivia.run())
 
       String.starts_with?(msg.content, "!ambiente ") ->
         Api.Message.create(msg.channel_id, Ambiente.run(msg.content))

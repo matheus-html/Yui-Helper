@@ -10,6 +10,7 @@ defmodule YuiHelper.Application do
     children = [
       # Starts a worker by calling: YuiHelper.Worker.start_link(arg)
       # {YuiHelper.Worker, arg}
+      {Finch, name: MyFinch},
       YuiHelper
     ]
 

@@ -26,7 +26,9 @@ defmodule YuiHelper do
 
       String.starts_with?(msg.content, "!sword_skill ") ->
         Api.Message.create(msg.channel_id, SwordSkill.run(msg.content))
-      String.starts_with?(msg.content, "!ping") -> Api.Message.create(msg.channel_id, "pong!")
+
+      String.starts_with?(msg.content, "!ping") ->
+        Api.Message.create(msg.channel_id, "pong!")
      true -> :ignore
    end
   end

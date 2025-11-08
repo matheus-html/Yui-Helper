@@ -1,43 +1,62 @@
 defmodule YuiHelper.Ambiente do
-  @base_url "https://wttr.in/"
+  @weather_url "https://api.open-meteo.com/v1/forecast"
+  @geo_url "https://geocoding-api.open-meteo.com/v1/search"
 
   def run(message_content) do
     message_content
     |> String.split(" ", parts: 2)
     |> case do
       ["!ambiente", cidade] ->
-        call_api(cidade)
+        call_geocoding_api(cidade)
 
       _ ->
         "Comando inválido. Use: `!ambiente [cidade]` (ex: `!ambiente Tokyo`)"
     end
   end
 
-  defp call_api(cidade) do
-    cidade_encodada = URI.encode_www_form(cidade)
-    url = @base_url <> cidade_encodada <> "?format=j1"
+  defp call_geocoding_api(cidade) do
+    query_string = URI.encode_query(%{"name" => cidade, "count" => 1})
+    url = @geo_url <> "?" <> query_string
 
-    headers = [{"Accept", "application/json"}]
-
-    case Finch.build(:get, url, headers) |> Finch.request(MyFinch) do
+    case Finch.build(:get, url) |> Finch.request(MyFinch) do
       {:ok, response} ->
-        case JSON.decode(response.body) do
-          {:ok, json} ->
-            case json["current_condition"] do
-              [condicao_atual | _] ->
-                temp = condicao_atual["temp_C"]
-                "Análise de ambiente em **#{cidade}**: #{temp}°C"
-
-              _ ->
-                "Yui não conseguiu encontrar dados para **#{cidade}**."
-            end
-
-          {:error, _} ->
-            "Yui não conseguiu encontrar o 'ambiente' **#{cidade}**. (Cidade não encontrada?)"
-        end
+        {:ok, json} = JSON.decode(response.body)
+        handle_geocoding_result(json, cidade)
 
       {:error, _reason} ->
-        "A API de clima (wttr.in) está offline."
+        "A API de Geocodificação (Open-Meteo) está offline."
+    end
+  end
+
+defp handle_geocoding_result(json, cidade_original) do
+    if not Map.has_key?(json, "results") do
+      "Yui não conseguiu processar o 'ambiente' **#{cidade_original}**. (API de Geocodificação falhou)"
+    else
+      case json["results"] do
+        [primeiro_resultado | _] ->
+          lat = primeiro_resultado["latitude"]
+          lon = primeiro_resultado["longitude"]
+          nome_real = primeiro_resultado["name"]
+
+          call_weather_api(lat, lon, nome_real)
+
+        [] ->
+          "Yui não conseguiu encontrar o 'ambiente' **#{cidade_original}**."
+      end
+    end
+  end
+
+  defp call_weather_api(lat, lon, nome_real) do
+    url = @weather_url <> "?latitude=#{lat}&longitude=#{lon}&current=temperature_2m"
+
+    case Finch.build(:get, url) |> Finch.request(MyFinch) do
+      {:ok, response} ->
+        {:ok, json} = JSON.decode(response.body)
+        temp = json["current"]["temperature_2m"]
+        "Análise de ambiente em **#{nome_real}**: #{temp}°C"
+
+      {:error, _reason} ->
+        "A API de clima (Open-Meteo) está offline."
     end
   end
 end
